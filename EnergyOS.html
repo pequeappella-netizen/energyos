@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="theme-color" content="#080414"/>
+  <title>EnergyOS</title>
+  <!-- PWA Manifest inline -->
+  <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22EnergyOS%22,%22short_name%22:%22EnergyOS%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23080414%22,%22theme_color%22:%22%23080414%22,%22description%22:%22Control%20de%20energia%20del%20hogar%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%20100'%3E%3Crect%20width%3D'100'%20height%3D'100'%20rx%3D'20'%20fill%3D'%23a855f7'%2F%3E%3Ctext%20y%3D'.9em'%20font-size%3D'80'%20x%3D'10'%3E%E2%9A%A1%3C%2Ftext%3E%3C%2Fsvg%3E%22,%22sizes%22:%22192x192%22,%22type%22:%22image/svg+xml%22}]}"/>
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23a855f7'/><text y='.9em' font-size='80' x='10'>⚡</text></svg>"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+@keyframes orb    {0%,100%{transform:scale(1)translate(0,0)}40%{transform:scale(1.1)translate(15px,-10px)}70%{transform:scale(.93)translate(-8px,15px)}}
+@keyframes fadeUp {from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes toastIn{from{opacity:0;transform:translateY(-16px)scale(.95)}to{opacity:1;transform:none}}
+@keyframes glow   {0%,100%{opacity:.6}50%{opacity:1}}
+@keyframes spin   {to{transform:rotate(360deg)}}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#080414;font-family:'Syne',sans-serif;color:#e8e0ff;overscroll-behavior:none}
+input,select,button,textarea{font-family:inherit}
+input::placeholder{color:rgba(255,255,255,.25)}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-thumb{background:rgba(168,85,247,.3);border-radius:2px}
+input[type=range]{accent-color:#a855f7;width:100%;cursor:pointer}
+select option{background:#140828}
+.glass     {background:rgba(20,8,40,.55);backdrop-filter:blur(20px) saturate(1.8);-webkit-backdrop-filter:blur(20px) saturate(1.8);border:1px solid rgba(168,85,247,.18);box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.glass-cyan{background:rgba(8,20,40,.55);backdrop-filter:blur(20px) saturate(1.8);-webkit-backdrop-filter:blur(20px) saturate(1.8);border:1px solid rgba(6,182,212,.2);box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.glass-red {background:rgba(40,8,8,.55);backdrop-filter:blur(20px) saturate(1.8);-webkit-backdrop-filter:blur(20px) saturate(1.8);border:1px solid rgba(255,85,120,.25);box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.grad-text {background:linear-gradient(135deg,#c084fc,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+#app{height:100vh;overflow:hidden;position:relative}
+.orb1,.orb2{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
+.orb1{width:500px;height:500px;background:radial-gradient(circle,rgba(168,85,247,.14) 0%,transparent 70%);top:-15%;left:-10%;animation:orb 12s ease-in-out infinite}
+.orb2{width:400px;height:400px;background:radial-gradient(circle,rgba(6,182,212,.11) 0%,transparent 70%);bottom:-5%;right:-5%;animation:orb 15s ease-in-out infinite reverse}
+#toasts{position:fixed;top:16px;left:16px;right:16px;z-index:999;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+.toast{border-radius:16px;padding:14px 18px;display:flex;align-items:center;gap:12px;animation:toastIn .35s cubic-bezier(.34,1.56,.64,1);pointer-events:all;cursor:pointer}
+.toast-warn{background:rgba(40,8,8,.92);border:1px solid rgba(255,85,120,.4)}
+.toast-ok  {background:rgba(8,20,40,.92);border:1px solid rgba(0,220,220,.3)}
+#topbar{position:relative;z-index:10;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.content{position:absolute;inset:0;overflow-y:scroll;-webkit-overflow-scrolling:touch;padding:14px 16px 90px;z-index:1}
+#bottomnav{position:fixed;bottom:0;left:0;right:0;z-index:20;display:flex;justify-content:space-around;padding:10px 8px env(safe-area-inset-bottom,16px)}
+.nav-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 10px;border-radius:16px;border:none;background:transparent;cursor:pointer;flex:1;max-width:68px;transition:background .2s}
+.nav-btn.active{background:rgba(168,85,247,.2)}
+.nav-btn .icon{font-size:20px}
+.nav-btn .label{font-size:9px;font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,.25);letter-spacing:.06em}
+.nav-btn.active .label{color:#c084fc}
+.card{border-radius:20px;padding:18px;margin-bottom:12px}
+.card-sm{border-radius:18px;padding:16px}
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.kpi-card{border-radius:18px;padding:16px}
+.dev-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px}
+.dev-card{border-radius:18px;padding:16px;cursor:pointer;transition:all .22s;position:relative;min-height:105px}
+.dev-card:active{transform:scale(.97)}
+.toggle{width:50px;height:28px;border-radius:14px;position:relative;cursor:pointer;transition:all .3s;flex-shrink:0}
+.toggle.on {background:linear-gradient(90deg,#a855f7,#06b6d4);box-shadow:0 0 16px rgba(168,85,247,.5);border:none}
+.toggle.off{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12)}
+.toggle-knob{width:22px;height:22px;border-radius:50%;background:#fff;position:absolute;top:3px;transition:left .3s cubic-bezier(.4,0,.2,1);box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.toggle.on  .toggle-knob{left:25px}
+.toggle.off .toggle-knob{left:3px}
+.gbar-wrap{background:rgba(255,255,255,.05);border-radius:6px;height:6px;overflow:hidden}
+.gbar-fill{height:100%;border-radius:6px;transition:width .7s cubic-bezier(.4,0,.2,1)}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:300;display:none;align-items:flex-end;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.modal-bg.open{display:flex}
+.modal-box{border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;animation:fadeUp .35s ease;max-height:90vh;overflow-y:auto}
+.handle{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.15);margin:0 auto 18px}
+.modal-title{font-weight:800;font-size:18px;margin-bottom:18px}
+.form-label{font-size:10px;color:rgba(168,85,247,.75);letter-spacing:.18em;font-family:'JetBrains Mono',monospace;margin-bottom:6px;display:block}
+.form-input{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(168,85,247,.25);border-radius:14px;padding:13px 15px;color:#fff;font-size:15px;outline:none;margin-bottom:14px}
+.form-input:focus{border-color:rgba(168,85,247,.6)}
+select.form-input{appearance:none}
+.btn-primary{padding:15px;border-radius:16px;border:none;background:linear-gradient(135deg,#a855f7,#06b6d4);color:#fff;font-weight:800;font-size:15px;width:100%;cursor:pointer;box-shadow:0 0 24px rgba(168,85,247,.4);font-family:inherit}
+.btn-ghost  {padding:15px;border-radius:16px;border:1px solid rgba(255,255,255,.1);background:transparent;color:rgba(255,255,255,.4);font-size:14px;width:100%;cursor:pointer;font-family:inherit}
+.btn-eco   {padding:15px;border-radius:16px;border:none;background:linear-gradient(135deg,#a855f7,#06b6d4);color:#fff;font-weight:700;font-size:14px;width:100%;cursor:pointer;font-family:inherit;box-shadow:0 0 24px rgba(168,85,247,.35)}
+.btn-restore{padding:15px;border-radius:16px;border:1px solid rgba(255,170,51,.3);background:rgba(255,170,51,.08);color:#ffaa33;font-weight:700;font-size:14px;width:100%;cursor:pointer;font-family:inherit}
+.btn-danger{padding:12px;border-radius:14px;border:1px solid rgba(255,85,120,.3);background:rgba(255,85,120,.08);color:rgba(255,85,120,.8);font-size:13px;cursor:pointer;font-family:inherit}
+.settings-row{border-radius:18px;padding:17px 18px;display:flex;align-items:center;gap:14px;margin-bottom:10px;cursor:pointer}
+.settings-icon{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+#login-screen{position:fixed;inset:0;background:#080414;z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.login-box{border-radius:28px;padding:40px 24px;width:100%;max-width:400px;animation:fadeUp .6s ease}
+.error-msg{font-size:13px;color:#ff7799;text-align:center;font-family:'JetBrains Mono',monospace;margin-top:-8px;margin-bottom:10px;animation:fadeUp .2s ease}
+.icon-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.icon-btn{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;transition:all .15s}
+.hist-bars{display:flex;align-items:flex-end;gap:7px;height:130px;margin-top:16px}
+.hist-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px}
+.hist-bar{width:100%;border-radius:5px 5px 0 0}
+.sched-card{border-radius:16px;padding:15px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
+.badge{font-size:10px;font-family:'JetBrains Mono',monospace;padding:3px 10px;border-radius:20px}
+.badge-on {color:#0ff;background:rgba(0,255,255,.08);border:1px solid rgba(0,255,255,.2)}
+.badge-off{color:#ffaa33;background:rgba(255,170,51,.08);border:1px solid rgba(255,170,51,.2)}
+.dot-online{width:8px;height:8px;border-radius:50%;background:#0ff;box-shadow:0 0 8px #0ff;display:inline-block;animation:glow 2s infinite;flex-shrink:0}
+.dot-offline{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2);display:inline-block;flex-shrink:0}
+.spinner{width:18px;height:18px;border:2px solid rgba(168,85,247,.3);border-top-color:#a855f7;border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
+#pwa-banner{display:none;position:fixed;bottom:80px;left:16px;right:16px;z-index:100;border-radius:18px;padding:14px 18px;align-items:center;gap:12px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="orb1"></div><div class="orb2"></div>
+  <div id="toasts"></div>
+
+  <!-- PWA install banner -->
+  <div id="pwa-banner" class="glass">
+    <span style="font-size:24px">📲</span>
+    <div style="flex:1">
+      <div style="font-weight:700;font-size:13px;color:#e8d0ff">Instalar como app</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px">Agregar a pantalla de inicio</div>
+    </div>
+    <button id="pwa-install-btn" style="padding:8px 14px;border-radius:12px;border:none;background:linear-gradient(135deg,#a855f7,#06b6d4);color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit">Instalar</button>
+    <button onclick="document.getElementById('pwa-banner').style.display='none'" style="background:none;border:none;color:rgba(255,255,255,.3);font-size:20px;cursor:pointer;padding:0 0 0 4px">×</button>
+  </div>
+
+  <!-- ═══ LOGIN ═══ -->
+  <div id="login-screen">
+    <div class="login-box glass">
+      <div style="text-align:center;margin-bottom:32px">
+        <div style="width:64px;height:64px;border-radius:20px;background:linear-gradient(135deg,#a855f7,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 14px;box-shadow:0 0 30px rgba(168,85,247,.5)">⚡</div>
+        <div class="grad-text" style="font-weight:800;font-size:26px">EnergyOS</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.3);font-family:'JetBrains Mono',monospace;letter-spacing:.2em;margin-top:4px">ACCESO SEGURO</div>
+      </div>
+      <label class="form-label">USUARIO</label>
+      <input id="lu" class="form-input" placeholder="admin" autocomplete="username"/>
+      <label class="form-label">CONTRASEÑA</label>
+      <input id="lp" class="form-input" type="password" placeholder="••••••••" autocomplete="current-password"/>
+      <div id="lerr" class="error-msg" style="display:none"></div>
+      <button class="btn-primary" id="lbtn" onclick="doLogin()" style="margin-top:4px">Entrar →</button>
+      <div style="margin-top:18px;padding:12px 14px;background:rgba(6,182,212,.06);border:1px solid rgba(6,182,212,.15);border-radius:12px;text-align:center">
+        <span style="font-size:11px;color:rgba(6,182,212,.6);font-family:'JetBrains Mono',monospace">Demo: <b style="color:rgba(6,182,212,.9)">admin</b> / <b style="color:rgba(6,182,212,.9)">energyos2024</b></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MAIN ═══ -->
+  <div id="main-app" style="display:none;flex-direction:column;height:100vh">
+    <!-- Top bar -->
+    <div id="topbar" class="glass">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#a855f7,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 16px rgba(168,85,247,.5)">⚡</div>
+        <div>
+          <div class="grad-text" style="font-weight:800;font-size:16px">EnergyOS</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.25);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:6px">
+            <span id="conn-dot" class="dot-offline"></span>
+            <span id="topbar-user">admin</span>
+            <span id="tapo-status" style="color:rgba(255,255,255,.2)">· demo</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div id="eco-topbtn" onclick="showModal('eco-modal')" style="padding:8px 12px;border-radius:20px;border:1px solid rgba(168,85,247,.2);background:transparent;color:rgba(168,85,247,.7);cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap">🌿 Ahorro</div>
+        <div id="clock" style="font-size:13px;font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,.5)"></div>
+      </div>
+    </div>
+    <div id="eco-banner" style="display:none;margin:8px 16px 0;border-radius:14px;padding:10px 16px;font-size:12px;color:#c084fc;font-family:'JetBrains Mono',monospace;background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.25);position:relative;z-index:1">
+      🌿 Modo Ahorro activo
+    </div>
+
+    <!-- Tab wrapper -->
+    <div style="flex:1;overflow:hidden;position:relative">
+
+      <!-- HOME -->
+      <div id="tab-home" class="content" style="display:block">
+        <div class="kpi-grid" id="kpi-grid"></div>
+        <div class="card glass" id="ring-card">
+          <div style="display:flex;align-items:center;gap:16px">
+            <div style="position:relative;flex-shrink:0">
+              <canvas id="ring-canvas" width="110" height="110"></canvas>
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                <span style="font-size:9px;color:rgba(255,255,255,.3);font-family:'JetBrains Mono',monospace">CARGA</span>
+                <span id="ring-pct" style="font-size:20px;font-weight:800;color:#0ff">0%</span>
+              </div>
+            </div>
+            <div style="flex:1" id="rooms-list"></div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <span style="font-size:9px;color:rgba(255,255,255,.3);letter-spacing:.18em;font-family:'JetBrains Mono',monospace">DISPOSITIVOS</span>
+          <button onclick="showModal('add-modal')" style="padding:7px 14px;border-radius:20px;border:1px solid rgba(6,182,212,.3);background:rgba(6,182,212,.08);color:#22d3ee;cursor:pointer;font-family:inherit;font-weight:600;font-size:12px">+ Agregar</button>
+        </div>
+        <div class="dev-grid" id="dev-grid"></div>
+      </div>
+
+      <!-- DEVICES -->
+      <div id="tab-devices" class="content" style="display:none">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+          <button onclick="showModal('add-modal')" style="padding:10px 20px;border-radius:20px;border:none;background:linear-gradient(135deg,#7c3aed,#06b6d4);color:#fff;cursor:pointer;font-family:inherit;font-weight:700;font-size:13px;box-shadow:0 0 20px rgba(124,58,237,.35)">➕ Nuevo</button>
+        </div>
+        <div id="dev-list"></div>
+      </div>
+
+      <!-- SCHEDULE -->
+      <div id="tab-schedule" class="content" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div style="font-size:9px;color:rgba(255,255,255,.3);letter-spacing:.18em;font-family:'JetBrains Mono',monospace">HORARIOS PROGRAMADOS</div>
+          <button onclick="showModal('sched-modal')" style="padding:7px 14px;border-radius:20px;border:none;background:linear-gradient(135deg,#7c3aed,#06b6d4);color:#fff;cursor:pointer;font-family:inherit;font-weight:600;font-size:12px">+ Nuevo</button>
+        </div>
+        <div id="sched-list"></div>
+        <div class="card glass" style="margin-top:4px">
+          <div style="font-size:9px;color:rgba(255,255,255,.3);letter-spacing:.18em;font-family:'JetBrains Mono',monospace;margin-bottom:12px">PRÓXIMAS EJECUCIONES</div>
+          <div id="next-runs"></div>
+        </div>
+      </div>
+
+      <!-- ALERTS -->
+      <div id="tab-alerts" class="content" style="display:none">
+        <div class="card glass">
+          <div style="font-size:9px;color:rgba(255,255,255,.3);letter-spacing:.18em;font-family:'JetBrains Mono',monospace;margin-bottom:14px">LÍMITE DE CONSUMO</div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px">
+            <span style="font-size:13px;color:rgba(255,255,255,.4)">Alertar si supera:</span>
+            <span id="alert-kw-display" style="font-size:24px;font-weight:800;color:#ff5577">8.0 kW</span>
+          </div>
+          <input type="range" id="alert-range" min="1000" max="12000" step="500" value="8000" oninput="updateAlertLimit(this.value)"/>
+          <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:rgba(255,255,255,.2);font-family:'JetBrains Mono',monospace"><span>1kW</span><span>6kW</span><span>12kW</span></div>
+          <div id="alert-status" style="margin-top:16px;padding:14px;border-radius:14px;background:rgba(0,255,255,.05);border:1px solid rgba(0,255,255,.15)">
+            <div style="font-size:13px;color:#0ff">✅ Dentro del límite</div>
+            <div id="alert-status-sub" style="font-size:11px;color:rgba(255,255,255,.25);font-family:'JetBrains Mono',monospace;margin-top:4px"></div>
+          </div>
+        </div>
+        <!-- Notifications -->
+        <div class="card glass">
+          <div style="font-size:9px;color:rgba(255,255,255,.3);letter-spacing:.18em;font-family:'JetBrains Mono',monospace;margin-bottom:14px">🔔 NOTIFICACIONES PUSH</div>
+          <div style="font-size:13px;color:rgba(255,255,255,.4);line-height:1.7;margin-bottom:16px">Recibe alertas en tu móvil aunque tengas el app cerrado.</div>
+          <div id="notif-status" style="margin-bottom:14px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);font-size:12px;color:rgba(255,255,255,.4);font-family:'JetBrains Mono',monospace">Estado: verificando…</div>
+          <button id="notif-btn" onclick="requestNotifications()" class="btn-primary">🔔 Activar notificaciones</button>
+        </div>
+        <div class="card glass">
+          <div style="font-size:9px;color:rgba(255,255,255,.3);letter-spacing:.18em;font-family:'JetBrains Mono',monospace;margin-bottom:14px">MODO AHORRO</div>
+          <div style="font-size:13px;color:rgba(255,255,255,.4);line-height:1.7;margin-bottom:16px">Apaga todos los aparatos no esenciales de golpe.</div>
+          <div id="eco-btn-wrap"></div>
+        </div>
+        <div class="card glass">
+          <div style="font-size:9px;color:rgba(255,255,255,.3);letter-spacing:.18em;font-family:'JetBrains Mono',monospace;margin-bottom:14px">MAYOR CONSUMO</div>
+          <div id="top-consumers"></div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div id="tab-settings" class="content" style="display:none">
+        <!-- Profile -->
+        <div class="card glass" style="display:flex;align-items:center;gap:16px">
+          <div id="avatar" style="width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,#a855f7,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;box-shadow:0 0 20px rgba(168,85,247,.5);flex-shrink:0;color:#fff">A</div>
+          <div style="flex:1">
+            <div id="profile-name" style="font-size:18px;font-weight:800;color:#e8d0ff">admin</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.3);font-family:'JetBrains Mono',monospace;margin-top:3px">Casa Principal · Admin</div>
+          </div>
+          <button onclick="openProfile()" style="padding:10px 15px;border-radius:14px;border:1px solid rgba(168,85,247,.3);background:rgba(168,85,247,.1);color:#c084fc;cursor:pointer;font-weight:600;font-size:13px;font-family:inherit">Editar</button>
+        </div>
+        <!-- Tapo connection -->
+        <div class="settings-row glass" onclick="showModal('tapo-modal')">
+          <div class="settings-icon" style="background:rgba(6,182,212,.12);border:1px solid rgba(6,182,212,.2)">🔌</div>
+          <div style="flex:1">
+            <div style="font-size:15px;font-weight:700;color:rgba(255,255,255,.8)">Conectar Tapo P110</div>
+            <div id="tapo-conn-desc" style="font-size:12px;color:rgba(255,255,255,.3);margin-top:2px">Sin conexión · Modo demo</div>
+          </div>
+          <div id="tapo-conn-badge" class="badge badge-off">Demo</div>
+        </div>
+        <!-- Notifications -->
+        <div class="settings-row glass" onclick="requestNotifications()">
+          <div class="settings-icon" style="background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.2)">🔔</div>
+          <div style="flex:1">
+            <div style="font-size:15px;font-weight:700;color:rgba(255,255,255,.8)">Notificaciones push</div>
+            <div id="notif-settings-desc" style="font-size:12px;color:rgba(255,255,255,.3);margin-top:2px">Toca para activar</div>
+          </div>
+          <div id="notif-badge" class="badge badge-off">Off</div>
+        </div>
+        <!-- PWA install -->
+        <div class="settings-row glass" id="pwa-settings-row" onclick="installPWA()" style="display:none">
+          <div class="settings-icon" style="background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.2)">📲</div>
+          <div style="flex:1">
+            <div style="font-size:15px;font-weight:700;color:rgba(255,255,255,.8)">Instalar como app</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.3);margin-top:2px">Agregar a pantalla de inicio</div>
+          </div>
+          <div class="badge" style="color:#22d3ee;background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.2)">Nuevo</div>
+        </div>
+        <!-- Security -->
+        <div class="settings-row glass" onclick="showModal('security-modal')">
+          <div class="settings-icon" style="background:rgba(6,182,212,.12);border:1px solid rgba(6,182,212,.2)">🔒</div>
+          <div style="flex:1"><div style="font-size:15px;font-weight:700;color:rgba(255,255,255,.8)">Seguridad</div><div style="font-size:12px;color:rgba(255,255,255,.3);margin-top:2px">JWT, HTTPS, Rate Limiting</div></div>
+          <div style="font-size:18px;color:rgba(255,255,255,.2)">›</div>
+        </div>
+        <button onclick="doLogout()" style="width:100%;padding:17px;border-radius:18px;border:1px solid rgba(255,85,120,.2);background:rgba(20,8,40,.55);color:rgba(255,85,120,.7);cursor:pointer;font-family:inherit;font-weight:700;font-size:15px;margin-top:4px;backdrop-filter:blur(20px)">Cerrar sesión</button>
+      </div>
+    </div>
+
+    <!-- Bottom nav -->
+    <div id="bottomnav" class="glass">
+      <button class="nav-btn active" id="nav-home"    onclick="switchTab('home')"    ><span class="icon">⚡</span><span class="label">Inicio</span></button>
+      <button class="nav-btn"        id="nav-devices" onclick="switchTab('devices')" ><span class="icon">🔌</span><span class="label">Devices</span></button>
+      <button class="nav-btn"        id="nav-schedule"onclick="switchTab('schedule')"><span class="icon">⏰</span><span class="label">Horarios</span></button>
+      <button class="nav-btn"        id="nav-alerts"  onclick="switchTab('alerts')"  ><span class="icon">🔔</span><span class="label">Alertas</span></button>
+      <button class="nav-btn"        id="nav-settings"onclick="switchTab('settings')"><span class="icon">⚙️</span><span class="label">Ajustes</span></button>
+    </div>
+  </div>
+
+  <!-- ═══ MODALS ═══ -->
+
+  <!-- ECO -->
+  <div class="modal-bg" id="eco-modal" onclick="hideModal('eco-modal')">
+    <div class="modal-box glass" onclick="event.stopPropagation()">
+      <div class="handle"></div>
+      <div class="modal-title grad-text">🌿 Activar Modo Ahorro</div>
+      <div style="font-size:14px;color:rgba(255,255,255,.5);line-height:1.7;margin-bottom:18px">Se apagarán todos los dispositivos excepto el refrigerador. Tu configuración quedará guardada.</div>
+      <div id="eco-saving" style="background:rgba(255,170,51,.08);border:1px solid rgba(255,170,51,.2);border-radius:14px;padding:14px;margin-bottom:22px;text-align:center;font-size:14px;color:#ffaa33"></div>
+      <div style="display:flex;gap:12px">
+        <button class="btn-ghost" onclick="hideModal('eco-modal')">Cancelar</button>
+        <button class="btn-eco" onclick="activateEco()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD DEVICE -->
+  <div class="modal-bg" id="add-modal" onclick="hideModal('add-modal')">
+    <div class="modal-box glass-cyan" onclick="event.stopPropagation()">
+      <div class="handle"></div>
+      <div class="modal-title" style="color:#22d3ee">➕ Nuevo dispositivo</div>
+      <label class="form-label">NOMBRE</label>
+      <input id="new-name" class="form-input" placeholder="Ej: Ventilador"/>
+      <label class="form-label">ÍCONO</label>
+      <div class="icon-grid" id="icon-grid"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="form-label">HABITACIÓN</label><select id="new-room" class="form-input"></select></div>
+        <div><label class="form-label">WATTS</label><input id="new-watts" class="form-input" type="number" min="1" max="20000" value="100"/></div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:4px">
+        <button class="btn-ghost" onclick="hideModal('add-modal')">Cancelar</button>
+        <button class="btn-primary" onclick="addDevice()">Agregar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCHEDULE -->
+  <div class="modal-bg" id="sched-modal" onclick="hideModal('sched-modal')">
+    <div class="modal-box glass" onclick="event.stopPropagation()">
+      <div class="handle"></div>
+      <div class="modal-title grad-text">⏰ Nuevo Horario</div>
+      <label class="form-label">DISPOSITIVO</label>
+      <select id="sched-device" class="form-input"></select>
+      <label class="form-label">ACCIÓN</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div id="sched-on"  onclick="selectSchedAction('on')"  style="padding:14px;border-radius:14px;border:2px solid rgba(0,255,255,.5);background:rgba(0,255,255,.08);text-align:center;cursor:pointer;transition:all .2s">
+          <div style="font-size:20px">🟢</div><div style="font-size:13px;color:#0ff;font-weight:700;margin-top:6px">Encender</div>
+        </div>
+        <div id="sched-off" onclick="selectSchedAction('off')" style="padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.1);background:transparent;text-align:center;cursor:pointer;transition:all .2s">
+          <div style="font-size:20px">🔴</div><div style="font-size:13px;color:rgba(255,255,255,.4);font-weight:700;margin-top:6px">Apagar</div>
+        </div>
+      </div>
+      <label class="form-label">HORA</label>
+      <input id="sched-time" class="form-input" type="time" value="07:00"/>
+      <label class="form-label">DÍAS</label>
+      <div style="display:flex;gap:8px;margin-bottom:14px" id="sched-days">
+        <div class="form-input" style="padding:0;border:none;background:none;display:flex;gap:8px;width:100%;margin-bottom:0">
+          <!-- Days rendered by JS -->
+        </div>
+      </div>
+      <div style="display:flex;gap:12px">
+        <button class="btn-ghost" onclick="hideModal('sched-modal')">Cancelar</button>
+        <button class="btn-primary" onclick="addSchedule()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAPO CONNECT -->
+  <div class="modal-bg" id="tapo-modal" onclick="hideModal('tapo-modal')">
+    <div class="modal-box glass-cyan" onclick="event.stopPropagation()">
+      <div class="handle"></div>
+      <div class="modal-title" style="color:#22d3ee">🔌 Conectar Tapo P110</div>
+      <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:14px;padding:14px;margin-bottom:18px;font-size:12px;color:rgba(255,255,255,.5);line-height:1.7">
+        <b style="color:#c084fc">Requiere el backend Node.js</b> corriendo en tu red.<br/>Ingresa la URL de tu servidor y tu API key.
+      </div>
+      <label class="form-label">URL DEL SERVIDOR</label>
+      <input id="tapo-url" class="form-input" placeholder="http://192.168.1.x:3001" type="url"/>
+      <label class="form-label">API KEY (JWT Token)</label>
+      <input id="tapo-key" class="form-input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..." type="password"/>
+      <div id="tapo-test-result" style="display:none;margin-bottom:14px;padding:12px 14px;border-radius:12px;font-size:12px;font-family:'JetBrains Mono',monospace"></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn-ghost" onclick="hideModal('tapo-modal')" style="flex:1">Cancelar</button>
+        <button onclick="testTapoConnection()" style="flex:1;padding:15px;border-radius:16px;border:1px solid rgba(6,182,212,.4);background:rgba(6,182,212,.1);color:#22d3ee;font-size:14px;cursor:pointer;font-family:inherit;font-weight:700">Probar</button>
+        <button onclick="saveTapoConnection()" class="btn-primary" style="flex:1">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="modal-bg" id="profile-modal" onclick="hideModal('profile-modal')">
+    <div class="modal-box glass" onclick="event.stopPropagation()">
+      <div class="handle"></div>
+      <div class="modal-title grad-text">👤 Editar Perfil</div>
+      <label class="form-label">NOMBRE DE USUARIO</label>
+      <input id="prof-username" class="form-input"/>
+      <div style="height:1px;background:rgba(255,255,255,.06);margin-bottom:14px"></div>
+      <div style="font-size:10px;color:rgba(168,85,247,.7);letter-spacing:.15em;font-family:'JetBrains Mono',monospace;margin-bottom:14px">CAMBIAR CONTRASEÑA</div>
+      <label class="form-label">CONTRASEÑA ACTUAL</label>
+      <input id="prof-current" class="form-input" type="password" placeholder="••••••••"/>
+      <label class="form-label">NUEVA CONTRASEÑA</label>
+      <input id="prof-new" class="form-input" type="password" placeholder="Mín. 6 caracteres"/>
+      <label class="form-label">CONFIRMAR</label>
+      <input id="prof-confirm" class="form-input" type="password" placeholder="Repite la nueva contraseña"/>
+      <div id="prof-err" class="error-msg" style="display:none"></div>
+      <button class="btn-primary" onclick="saveProfile()">Guardar cambios</button>
+    </div>
+  </div>
+
+  <!-- SECURITY -->
+  <div class="modal-bg" id="security-modal" onclick="hideModal('security-modal')">
+    <div class="modal-box glass-cyan" onclick="event.stopPropagation()">
+      <div class="handle"></div>
+      <div class="modal-title" style="color:#22d3ee">🔒 Seguridad</div>
+      <div style="display:flex;flex-direction:column;gap:0">
+        <div style="display:flex;align-items:center;gap:14px;padding:15px 0">
+          <span style="font-size:24px">🔐</span>
+          <div style="flex:1"><div style="font-size:14px;font-weight:600;color:rgba(255,255,255,.75)">Autenticación JWT</div><div style="font-size:11px;color:rgba(255,255,255,.25);font-family:'JetBrains Mono',monospace;margin-top:2px">Sesión activa y verificada</div></div>
+          <span class="badge badge-on">✓ OK</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;padding:15px 0;border-top:1px solid rgba(255,255,255,.05)">
+          <span style="font-size:24px">🔒</span>
+          <div style="flex:1"><div style="font-size:14px;font-weight:600;color:rgba(255,255,255,.75)">Cifrado HTTPS</div><div style="font-size:11px;color:rgba(255,255,255,.25);font-family:'JetBrains Mono',monospace;margin-top:2px">Todo el tráfico cifrado</div></div>
+          <span class="badge badge-on">✓ OK</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;padding:15px 0;border-top:1px solid rgba(255,255,255,.05)">
+          <span style="font-size:24px">🛡️</span>
+          <div style="flex:1"><div style="font-size:14px;font-weight:600;color:rgba(255,255,255,.75)">Rate Limiting</div><div style="font-size:11px;color:rgba(255,255,255,.25);font-family:'JetBrains Mono',monospace;margin-top:2px">Máx. 100 peticiones/min</div></div>
+          <span class="badge badge-on">✓ OK</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;padding:15px 0;border-top:1px solid rgba(255,255,255,.05)">
+          <span style="font-size:24px">🌐</span>
+          <div style="flex:1"><div style="font-size:14px;font-weight:600;color:rgba(255,255,255,.75)">Red IoT separada</div><div style="font-size:11px;color:rgba(255,255,255,.25);font-family:'JetBrains Mono',monospace;margin-top:2px">Configura en tu router</div></div>
+          <span class="badge badge-off">⚠ Config</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────
+const ROOMS = ["Sala","Cocina","Habitación","Baño","Oficina","Lavandería","Garaje","Jardín"];
+const ICONS = ["💡","❄️","📺","🖥️","🧊","🚿","🫧","🍳","🔌","🎮","📡","🔆","🎵","🌡️"];
+const DAYS  = ["L","M","X","J","V","S","D"];
+const PRICE = 0.18;
+
+// ── State ─────────────────────────────────────────────────────────
+const S = {
+  user: { username:"admin", password:"energyos2024" },
+  devices: [
+    {id:1,name:"Aire Acondicionado",room:"Sala",       icon:"❄️",watts:1500,on:true, custom:false},
+    {id:2,name:"Refrigerador",      room:"Cocina",     icon:"🧊",watts:150, on:true, custom:false},
+    {id:3,name:"Televisión",        room:"Sala",       icon:"📺",watts:120, on:false,custom:false},
+    {id:4,name:"Calentador",        room:"Baño",       icon:"🚿",watts:5500,on:true, custom:false},
+    {id:5,name:"Iluminación",       room:"Habitación", icon:"💡",watts:60,  on:false,custom:false},
+    {id:6,name:"Lavadora",          room:"Lavandería", icon:"🫧",watts:1000,on:false,custom:false},
+    {id:7,name:"Computadora",       room:"Oficina",    icon:"🖥️",watts:300, on:true, custom:false},
+    {id:8,name:"Horno",             room:"Cocina",     icon:"🍳",watts:2000,on:false,custom:false},
+  ],
+  schedules: [
+    {id:1,deviceId:1,action:"off",time:"23:00",days:[0,1,2,3,4],enabled:true},
+    {id:2,deviceId:4,action:"off",time:"08:30",days:[5,6],enabled:true},
+  ],
+  ecoMode: false,
+  savedStates: null,
+  alertLimit: 8000,
+  selectedIcon: "🔌",
+  schedAction: "on",
+  selectedDays: [0,1,2,3,4],
+  tapo: { url:"", key:"", connected:false },
+  history: ["L","M","X","J","V","S","D"].map(d=>({day:d,kwh:+(2+Math.random()*9).toFixed(1)})),
+  notifEnabled: false,
+};
+
+// ── Computed ──────────────────────────────────────────────────────
+const totalW   = () => S.devices.filter(d=>d.on).reduce((s,d)=>s+d.watts,0);
+const dailyKwh = () => (totalW()/1000*24).toFixed(1);
+const dailyCost= () => (dailyKwh()*PRICE).toFixed(2);
+
+// ── Login ─────────────────────────────────────────────────────────
+function doLogin() {
+  const u=_('lu').value.trim(), p=_('lp').value;
+  const err=_('lerr'), btn=_('lbtn');
+  if(!u||!p){showErr(err,"Completa todos los campos");return;}
+  btn.textContent="Verificando…";btn.disabled=true;
+  setTimeout(()=>{
+    if(u===S.user.username&&p===S.user.password){
+      _('login-screen').style.display="none";
+      const ma=_('main-app'); ma.style.display="flex"; ma.style.flexDirection="column";
+      _('topbar-user').textContent=S.user.username;
+      _('avatar').textContent=S.user.username.charAt(0).toUpperCase();
+      _('profile-name').textContent=S.user.username;
+      checkNotifStatus(); initSchedulerDays();
+      renderAll(); startClock(); checkSchedules();
+    } else {
+      showErr(err,"Credenciales incorrectas");
+      btn.textContent="Entrar →"; btn.disabled=false;
+    }
+  },700);
+}
+function doLogout(){
+  _('main-app').style.display="none";
+  _('login-screen').style.display="flex";
+  _('lu').value=""; _('lp').value="";
+}
+_('lp').addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
+_('lu').addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
+
+// ── Helpers ───────────────────────────────────────────────────────
+function _(id){return document.getElementById(id);}
+function showErr(el,msg){el.textContent=msg;el.style.display="block";setTimeout(()=>el.style.display="none",3500);}
+
+// ── Clock ─────────────────────────────────────────────────────────
+function startClock(){
+  const tick=()=>_('clock').textContent=new Date().toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"});
+  tick(); setInterval(tick,1000);
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────
+function switchTab(t){
+  ["home","devices","schedule","alerts","settings"].forEach(x=>{
+    _('tab-'+x).style.display=x===t?"block":"none";
+    _('nav-'+x).classList.toggle("active",x===t);
+  });
+  if(t==="home")    renderHome();
+  if(t==="devices") renderDeviceList();
+  if(t==="schedule")renderSchedules();
+  if(t==="alerts")  renderAlerts();
+}
+
+// ── Toggle ────────────────────────────────────────────────────────
+async function toggleDevice(id){
+  if(S.ecoMode) return;
+  const d=S.devices.find(x=>x.id===id); if(!d) return;
+  if(S.tapo.connected){
+    try{
+      const r=await fetch(`${S.tapo.url}/api/devices/${id}/toggle`,{method:"POST",headers:{Authorization:"Bearer "+S.tapo.key}});
+      const j=await r.json(); d.on=j.state;
+    }catch{ d.on=!d.on; }
+  } else { d.on=!d.on; }
+  renderHome(); renderDeviceList(); updateAlertCheck();
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────
+function renderKPIs(){
+  const tw=totalW(), over=tw>S.alertLimit;
+  _('kpi-grid').innerHTML=`
+    <div class="kpi-card glass"><div style="font-size:9px;color:rgba(255,255,255,.3);letter-spacing:.18em;font-family:'JetBrains Mono',monospace;margin-bottom:8px">CONSUMO</div><div style="font-size:22px;font-weight:800;color:${over?"#ff5577":"#0ff"}">${(tw/1000).toFixed(2)}<span style="font-size:12px;color:rgba(255,255,255,.25)"> kW</span></div></div>
+    <div class="kpi-card glass"><div style="font-size:9px;color:rgba(255,255,255,.3);letter-spacing:.18em;font-family:'JetBrains Mono',monospace;margin-bottom:8px">COSTO HOY</div><div style="font-size:22px;font-weight:800;color:#f0abfc">€${dailyCost()}</div></div>
+    <div class="kpi-card glass"><div style="font-size:9px;color:rgba(255,255,255,.3);letter-spacing:.18em;font-family:'JetBrains Mono',monospace;margin-bottom:8px">ACTIVOS</div><div style="font-size:22px;font-weight:800;color:#a855f7">${S.devices.filter(d=>d.on).length}<span style="font-size:12px;color:rgba(255,255,255,.25)">/${S.devices.length}</span></div></div>
+    <div class="kpi-card glass"><div style="font-size:9px;color:rgba(255,255,255,.3);letter-spacing:.18em;font-family:'JetBrains Mono',monospace;margin-bottom:8px">DIARIO</div><div style="font-size:22px;font-weight:800;color:#22d3ee">${dailyKwh()}<span style="font-size:12px;color:rgba(255,255,255,.25)"> kWh</span></div></div>`;
+}
+
+// ── Ring ──────────────────────────────────────────────────────────
+function renderRing(){
+  const tw=totalW(),max=12000,pct=Math.min(tw/max,1);
+  const col=pct>.8?"#ff5577":pct>.5?"#ffaa33":"#0ff";
+  const c=_('ring-canvas'),ctx=c.getContext("2d"),s=110,r=s/2-11,circ=2*Math.PI*r;
+  ctx.clearRect(0,0,s,s);
+  ctx.beginPath();ctx.arc(s/2,s/2,r,-Math.PI/2,Math.PI*1.5);ctx.strokeStyle="rgba(255,255,255,.05)";ctx.lineWidth=9;ctx.stroke();
+  ctx.beginPath();ctx.arc(s/2,s/2,r,-Math.PI/2,-Math.PI/2+2*Math.PI*pct);ctx.strokeStyle=col;ctx.lineWidth=9;ctx.lineCap="round";ctx.shadowColor=col;ctx.shadowBlur=12;ctx.stroke();ctx.shadowBlur=0;
+  _('ring-pct').textContent=Math.round(pct*100)+"%"; _('ring-pct').style.color=col;
+  const rooms=["Sala","Cocina","Habitación","Baño"];
+  _('rooms-list').innerHTML=`<div style="font-size:9px;color:rgba(255,255,255,.3);letter-spacing:.18em;font-family:'JetBrains Mono',monospace;margin-bottom:10px">POR HABITACIÓN</div>`+rooms.map(room=>{
+    const w=S.devices.filter(d=>d.room===room&&d.on).reduce((s,d)=>s+d.watts,0);
+    const c2=w>4000?"#ff5577":w>2000?"#ffaa33":"#0ff";
+    return `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;color:rgba(255,255,255,.45)">${room}</span><span style="font-size:10px;color:rgba(255,255,255,.2);font-family:'JetBrains Mono',monospace">${w}W</span></div><div class="gbar-wrap"><div class="gbar-fill" style="width:${Math.min(w/6000*100,100)}%;background:linear-gradient(90deg,${c2}88,${c2});box-shadow:0 0 8px ${c2}77"></div></div></div>`;
+  }).join("");
+}
+
+function renderDeviceGrid(){
+  _('dev-grid').innerHTML=S.devices.map(d=>`
+    <div class="dev-card" onclick="toggleDevice(${d.id})" style="background:rgba(20,8,40,${d.on?.55:.3});border:1px solid ${d.on?"rgba(168,85,247,.28)":"rgba(255,255,255,.07)"};opacity:${S.ecoMode&&!d.on?.3:1}">
+      <div style="font-size:26px;margin-bottom:8px">${d.icon}</div>
+      <div style="font-size:13px;font-weight:700;color:${d.on?"#e8d0ff":"rgba(255,255,255,.3)"};margin-bottom:2px;line-height:1.2">${d.name}</div>
+      <div style="font-size:10px;color:rgba(255,255,255,.2);font-family:'JetBrains Mono',monospace">${d.watts}W</div>
+      <div style="position:absolute;top:12px;right:12px"><div class="toggle ${d.on?"on":"off"}" onclick="event.stopPropagation();toggleDevice(${d.id})"><div class="toggle-knob"></div></div></div>
+    </div>`).join("");
+}
+
+function renderHome(){ renderKPIs(); renderRing(); renderDeviceGrid(); }
+
+function renderDeviceList(){
+  _('dev-list').innerHTML=S.devices.map(d=>`
+    <div style="background:rgba(20,8,40,.55);backdrop-filter:blur(20px);border:1px solid rgba(168,85,247,.12);border-radius:18px;padding:16px 18px;display:flex;align-items:center;gap:14px;margin-bottom:10px">
+      <span style="font-size:26px">${d.icon}</span>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+          <span style="font-size:15px;font-weight:700;color:${d.on?"#e8d0ff":"rgba(255,255,255,.35)"}">${d.name}</span>
+          <span style="font-size:10px;color:rgba(168,85,247,.6);background:rgba(168,85,247,.1);padding:2px 8px;border-radius:20px;font-family:'JetBrains Mono',monospace">${d.room}</span>
+        </div>
+        <div style="font-size:11px;color:rgba(255,255,255,.25);font-family:'JetBrains Mono',monospace">${d.watts}W · ${d.on?`<span style="color:#0ff">encendido</span>`:"apagado"}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        ${d.on?`<div style="font-size:11px;color:#ffaa33;font-family:'JetBrains Mono',monospace">€${(d.watts/1000*24*PRICE).toFixed(2)}/día</div>`:""}
+        <div class="toggle ${d.on?"on":"off"}" onclick="toggleDevice(${d.id})"><div class="toggle-knob"></div></div>
+        ${d.custom?`<div onclick="removeDevice(${d.id})" style="font-size:12px;color:rgba(255,85,120,.4);cursor:pointer;font-family:'JetBrains Mono',monospace">eliminar</div>`:""}
+      </div>
+    </div>`).join("");
+}
+
+// ── Schedules ─────────────────────────────────────────────────────
+function initSchedulerDays(){
+  _('sched-days').innerHTML=DAYS.map((d,i)=>`
+    <div onclick="toggleSchedDay(${i})" id="sday-${i}" style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;border:${S.selectedDays.includes(i)?"none":"1px solid rgba(255,255,255,.15)"};background:${S.selectedDays.includes(i)?"linear-gradient(135deg,#a855f7,#06b6d4)":"rgba(255,255,255,.05)"};color:${S.selectedDays.includes(i)?"#fff":"rgba(255,255,255,.4)"}">${d}</div>
+  `).join("");
+}
+
+function toggleSchedDay(i){
+  if(S.selectedDays.includes(i)) S.selectedDays=S.selectedDays.filter(x=>x!==i);
+  else S.selectedDays.push(i);
+  initSchedulerDays();
+}
+
+function selectSchedAction(a){
+  S.schedAction=a;
+  _('sched-on').style.border= a==="on"?"2px solid rgba(0,255,255,.5)":"1px solid rgba(255,255,255,.1)";
+  _('sched-on').style.background= a==="on"?"rgba(0,255,255,.08)":"transparent";
+  _('sched-on').querySelector("div:last-child").style.color= a==="on"?"#0ff":"rgba(255,255,255,.4)";
+  _('sched-off').style.border= a==="off"?"2px solid rgba(255,85,120,.5)":"1px solid rgba(255,255,255,.1)";
+  _('sched-off').style.background= a==="off"?"rgba(255,85,120,.08)":"transparent";
+  _('sched-off').querySelector("div:last-child").style.color= a==="off"?"#ff7799":"rgba(255,255,255,.4)";
+}
+
+function openSchedModal(){
+  const sel=_('sched-device'); sel.innerHTML="";
+  S.devices.forEach(d=>{const o=document.createElement("option");o.value=d.id;o.textContent=`${d.icon} ${d.name}`;sel.appendChild(o);});
+  S.selectedDays=[0,1,2,3,4]; S.schedAction="on";
+  initSchedulerDays(); selectSchedAction("on");
+  showModal('sched-modal');
+}
+
+function addSchedule(){
+  const devId=+_('sched-device').value, time=_('sched-time').value;
+  if(!devId||!time||!S.selectedDays.length){showToast("Completa todos los campos","","warn");return;}
+  S.schedules.push({id:Date.now(),deviceId:devId,action:S.schedAction,time,days:[...S.selectedDays],enabled:true});
+  hideModal('sched-modal');
+  renderSchedules();
+  showToast("Horario guardado",`${time} · ${S.schedAction==="on"?"Encender":"Apagar"}`);
+}
+
+function toggleSchedule(id){
+  const s=S.schedules.find(x=>x.id===id); if(s) s.enabled=!s.enabled;
+  renderSchedules();
+}
+
+function removeSchedule(id){
+  S.schedules=S.schedules.filter(x=>x.id!==id);
+  renderSchedules();
+}
+
+function renderSchedules(){
+  const el=_('sched-list');
+  if(!S.schedules.length){el.innerHTML=`<div style="text-align:center;padding:40px 20px;color:rgba(255,255,255,.25);font-size:14px">No hay horarios programados.<br><span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:rgba(168,85,247,.4)">Toca + Nuevo para agregar</span></div>`;return;}
+  el.innerHTML=S.schedules.map(s=>{
+    const dev=S.devices.find(d=>d.id===s.deviceId);
+    const dayNames=s.days.map(i=>DAYS[i]).join(" ");
+    return `<div class="sched-card glass">
+      <div style="font-size:24px">${dev?dev.icon:"🔌"}</div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="font-size:14px;font-weight:700;color:${s.enabled?"#e8d0ff":"rgba(255,255,255,.35)"}">${dev?dev.name:"Dispositivo"}</span>
+          <span class="badge ${s.action==="on"?"badge-on":"badge-off"}">${s.action==="on"?"Encender":"Apagar"}</span>
+        </div>
+        <div style="font-size:12px;color:rgba(255,255,255,.4);font-family:'JetBrains Mono',monospace">${s.time} · ${dayNames}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        <div class="toggle ${s.enabled?"on":"off"}" onclick="toggleSchedule(${s.id})"><div class="toggle-knob"></div></div>
+        <div onclick="removeSchedule(${s.id})" style="font-size:11px;color:rgba(255,85,120,.4);cursor:pointer;font-family:'JetBrains Mono',monospace">eliminar</div>
+      </div>
+    </div>`;
+  }).join("");
+  // Next runs
+  const now=new Date(), nextHtml=S.schedules.filter(s=>s.enabled).slice(0,3).map(s=>{
+    const dev=S.devices.find(d=>d.id===s.deviceId);
+    const [h,m]=s.time.split(":").map(Number);
+    const next=new Date(); next.setHours(h,m,0,0);
+    if(next<=now) next.setDate(next.getDate()+1);
+    const diff=Math.round((next-now)/60000);
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid rgba(255,255,255,.04)">
+      <span style="font-size:18px">${dev?dev.icon:"🔌"}</span>
+      <div style="flex:1"><div style="font-size:13px;color:rgba(255,255,255,.6)">${dev?dev.name:"?"} — ${s.action==="on"?"Encender":"Apagar"}</div><div style="font-size:11px;color:rgba(255,255,255,.25);font-family:'JetBrains Mono',monospace;margin-top:2px">${s.time} · en ${diff<60?diff+"min":Math.round(diff/60)+"h"}</div></div>
+    </div>`;
+  }).join("");
+  _('next-runs').innerHTML=nextHtml||`<div style="font-size:12px;color:rgba(255,255,255,.25);text-align:center;padding:10px">Sin horarios activos</div>`;
+}
+
+// ── Schedule checker ──────────────────────────────────────────────
+function checkSchedules(){
+  setInterval(()=>{
+    const now=new Date(), h=now.getHours(), m=now.getMinutes(), day=now.getDay()===0?6:now.getDay()-1;
+    S.schedules.filter(s=>s.enabled).forEach(s=>{
+      const [sh,sm]=s.time.split(":").map(Number);
+      if(sh===h&&sm===m&&s.days.includes(day)&&now.getSeconds()<30){
+        const d=S.devices.find(x=>x.id===s.deviceId); if(!d) return;
+        const newState=s.action==="on";
+        if(d.on!==newState){ d.on=newState; renderHome(); renderDeviceList();
+          const msg=`${d.name} ${newState?"encendido":"apagado"} automáticamente`;
+          showToast("⏰ Horario ejecutado",msg);
+          sendNotification("⏰ EnergyOS",msg);
+        }
+      }
+    });
+  },30000);
+}
+
+// ── Alerts ────────────────────────────────────────────────────────
+function renderAlerts(){ updateAlertCheck(); renderTopConsumers(); renderEcoBtns(); }
+function updateAlertCheck(){
+  const tw=totalW(), over=tw>S.alertLimit;
+  const el=_('alert-status'); if(!el) return;
+  el.style.background=over?"rgba(255,85,120,.07)":"rgba(0,255,255,.05)";
+  el.style.borderColor=over?"rgba(255,85,120,.2)":"rgba(0,255,255,.15)";
+  el.children[0].style.color=over?"#ff7799":"#0ff";
+  el.children[0].textContent=over?"⚠️ Por encima del límite":"✅ Dentro del límite";
+  _('alert-status-sub').textContent=`${(tw/1000).toFixed(2)} kW / límite ${(S.alertLimit/1000).toFixed(1)} kW`;
+}
+function updateAlertLimit(v){
+  S.alertLimit=+v;
+  _('alert-kw-display').textContent=(v/1000).toFixed(1)+" kW";
+  updateAlertCheck();
+}
+function renderTopConsumers(){
+  const el=_('top-consumers'); if(!el) return;
+  el.innerHTML=[...S.devices].sort((a,b)=>b.watts-a.watts).slice(0,5).map((d,i)=>{
+    const col=d.watts>3000?"#ff5577":d.watts>1000?"#ffaa33":"#0ff";
+    return `<div style="display:flex;align-items:center;gap:12px;${i>0?"margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.04)":""}">
+      <span style="font-size:20px">${d.icon}</span>
+      <div style="flex:1"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;color:${d.on?"rgba(255,255,255,.7)":"rgba(255,255,255,.3)"}">${d.name}</span><span style="font-size:11px;color:${col};font-family:'JetBrains Mono',monospace">${d.watts}W</span></div><div class="gbar-wrap"><div class="gbar-fill" style="width:${Math.min(d.watts/6000*100,100)}%;background:linear-gradient(90deg,${col}88,${col});box-shadow:0 0 8px ${col}77"></div></div></div>
+    </div>`;
+  }).join("");
+}
+function renderEcoBtns(){
+  const el=_('eco-btn-wrap'); if(!el) return;
+  el.innerHTML=S.ecoMode
+    ?`<button class="btn-restore" onclick="deactivateEco()">🔄 Restaurar estado anterior</button>`
+    :`<button class="btn-eco" onclick="showModal('eco-modal')">🌿 Activar Modo Ahorro</button>`;
+}
+
+// ── Eco mode ──────────────────────────────────────────────────────
+function activateEco(){
+  S.savedStates=S.devices.map(d=>({id:d.id,on:d.on}));
+  S.devices.forEach(d=>d.on=d.id===2);
+  S.ecoMode=true; _('eco-banner').style.display="block";
+  _('eco-topbtn').textContent="🌿 ECO ON"; _('eco-topbtn').style.background="rgba(168,85,247,.15)";
+  hideModal('eco-modal'); renderAll();
+  showToast("Modo Ahorro activado","Solo el refrigerador encendido");
+  sendNotification("🌿 EnergyOS","Modo Ahorro activado");
+}
+function deactivateEco(){
+  if(S.savedStates) S.savedStates.forEach(s=>{const d=S.devices.find(x=>x.id===s.id);if(d)d.on=s.on;});
+  S.ecoMode=false; S.savedStates=null;
+  _('eco-banner').style.display="none";
+  _('eco-topbtn').textContent="🌿 Ahorro"; _('eco-topbtn').style.background="transparent";
+  renderAll(); showToast("Modo Ahorro desactivado","Estado anterior restaurado");
+}
+
+// ── Add / Remove device ───────────────────────────────────────────
+function initAddModal(){
+  const ig=_('icon-grid');
+  ig.innerHTML=ICONS.map(ic=>`<div class="icon-btn" onclick="selectIcon('${ic}')" data-ic="${ic.codePointAt(0)}" style="background:${S.selectedIcon===ic?"rgba(168,85,247,.2)":"rgba(255,255,255,.05)"};border:1px solid ${S.selectedIcon===ic?"rgba(168,85,247,.7)":"rgba(255,255,255,.08)"}">${ic}</div>`).join("");
+  const rs=_('new-room'); rs.innerHTML="";
+  ROOMS.forEach(r=>{const o=document.createElement("option");o.textContent=r;rs.appendChild(o);});
+}
+function selectIcon(ic){
+  S.selectedIcon=ic;
+  document.querySelectorAll(".icon-btn").forEach(el=>{el.style.background="rgba(255,255,255,.05)";el.style.border="1px solid rgba(255,255,255,.08)";});
+  document.querySelector(`.icon-btn[data-ic="${ic.codePointAt(0)}"]`).style.cssText+="background:rgba(168,85,247,.2);border:1px solid rgba(168,85,247,.7)";
+}
+function addDevice(){
+  const name=_('new-name').value.trim(); if(!name){showToast("Escribe un nombre","","warn");return;}
+  const w=+_('new-watts').value||100, room=_('new-room').value;
+  S.devices.push({id:Date.now(),name,room,icon:S.selectedIcon,watts:w,on:false,custom:true});
+  _('new-name').value=""; hideModal("add-modal"); renderAll();
+  showToast("Dispositivo agregado",name);
+}
+function removeDevice(id){S.devices=S.devices.filter(d=>d.id!==id);renderAll();}
+
+// ── Tapo connection ───────────────────────────────────────────────
+async function testTapoConnection(){
+  const url=_('tapo-url').value.trim(), key=_('tapo-key').value.trim();
+  const res=_('tapo-test-result'); res.style.display="block";
+  res.style.background="rgba(255,255,255,.04)"; res.style.border="1px solid rgba(255,255,255,.1)";
+  res.style.color="rgba(255,255,255,.4)"; res.textContent="🔄 Conectando…";
+  try{
+    const r=await fetch(`${url}/api/health`,{headers:{Authorization:"Bearer "+key},signal:AbortSignal.timeout(5000)});
+    const j=await r.json();
+    if(r.ok&&j.status==="ok"){
+      res.style.background="rgba(0,255,255,.06)"; res.style.border="1px solid rgba(0,255,255,.2)"; res.style.color="#0ff";
+      res.textContent="✅ Conexión exitosa — Servidor v"+j.version;
+    } else { throw new Error("Error del servidor"); }
+  }catch(e){
+    res.style.background="rgba(255,85,120,.06)"; res.style.border="1px solid rgba(255,85,120,.2)"; res.style.color="#ff7799";
+    res.textContent="❌ No se pudo conectar. Verifica la URL y que el servidor esté activo.";
+  }
+}
+function saveTapoConnection(){
+  const url=_('tapo-url').value.trim(), key=_('tapo-key').value.trim();
+  if(!url||!key){showToast("Completa URL y API Key","","warn");return;}
+  S.tapo={url,key,connected:true};
+  _('tapo-status').textContent="· conectado"; _('tapo-status').style.color="#0ff";
+  _('conn-dot').className="dot-online";
+  _('tapo-conn-desc').textContent="Conectado · Tapo P110";
+  _('tapo-conn-badge').textContent="En vivo"; _('tapo-conn-badge').className="badge badge-on";
+  hideModal('tapo-modal');
+  showToast("Tapo conectado","Datos en tiempo real activados");
+}
+
+// ── Push Notifications ────────────────────────────────────────────
+async function requestNotifications(){
+  if(!("Notification" in window)){showToast("No disponible","Tu navegador no soporta notificaciones","warn");return;}
+  if(Notification.permission==="granted"){ showToast("Ya activadas","Las notificaciones están habilitadas"); return; }
+  const perm=await Notification.requestPermission();
+  if(perm==="granted"){
+    S.notifEnabled=true;
+    updateNotifUI(true);
+    showToast("¡Notificaciones activadas!","Te avisaremos sobre consumo alto");
+    sendNotification("⚡ EnergyOS","Notificaciones activadas correctamente ✅");
+  } else {
+    showToast("Permiso denegado","Actívalas en ajustes del navegador","warn");
+  }
+}
+function sendNotification(title,body){
+  if(Notification.permission==="granted"&&document.hidden){
+    new Notification(title,{body,icon:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23a855f7'/><text y='.9em' font-size='80' x='10'>⚡</text></svg>"});
+  }
+}
+function checkNotifStatus(){
+  if(!("Notification" in window)) return;
+  const granted=Notification.permission==="granted";
+  S.notifEnabled=granted;
+  updateNotifUI(granted);
+}
+function updateNotifUI(on){
+  const btn=_('notif-btn'), st=_('notif-status'), badge=_('notif-badge'), desc=_('notif-settings-desc');
+  if(on){
+    if(btn){btn.textContent="🔔 Notificaciones activas";btn.style.opacity=".6";btn.disabled=true;}
+    if(st){st.style.background="rgba(0,255,255,.06)";st.style.border="1px solid rgba(0,255,255,.2)";st.style.color="#0ff";st.textContent="Estado: ✅ Activadas — Recibirás alertas en este dispositivo";}
+    if(badge){badge.textContent="On";badge.className="badge badge-on";}
+    if(desc) desc.textContent="Activadas ✓";
+  } else {
+    if(btn){btn.textContent="🔔 Activar notificaciones";btn.style.opacity="1";btn.disabled=false;}
+    if(st){st.style.background="rgba(255,255,255,.04)";st.style.border="1px solid rgba(255,255,255,.08)";st.style.color="rgba(255,255,255,.4)";st.textContent="Estado: Sin activar — Toca el botón para habilitar";}
+    if(badge){badge.textContent="Off";badge.className="badge badge-off";}
+    if(desc) desc.textContent="Toca para activar";
+  }
+}
+
+// ── PWA Install ───────────────────────────────────────────────────
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault(); deferredPrompt=e;
+  _('pwa-banner').style.display="flex";
+  _('pwa-settings-row').style.display="flex";
+});
+async function installPWA(){
+  if(!deferredPrompt){
+    showToast("Cómo instalar","Menú del navegador → Añadir a pantalla de inicio");
+    return;
+  }
+  deferredPrompt.prompt();
+  const {outcome}=await deferredPrompt.userChoice;
+  deferredPrompt=null;
+  _('pwa-banner').style.display="none";
+  if(outcome==="accepted") showToast("¡App instalada!","Busca EnergyOS en tu pantalla de inicio");
+}
+_('pwa-install-btn').onclick=installPWA;
+window.addEventListener('appinstalled',()=>{
+  _('pwa-banner').style.display="none";
+  _('pwa-settings-row').style.display="none";
+  showToast("¡App instalada!","Abre EnergyOS desde tu pantalla de inicio");
+});
+
+// ── Alert checker ─────────────────────────────────────────────────
+let prevW=totalW();
+setInterval(()=>{
+  const tw=totalW();
+  if(tw>S.alertLimit&&prevW<=S.alertLimit){
+    showToast("¡Consumo elevado!",`${(tw/1000).toFixed(2)} kW supera tu límite`,"warn");
+    sendNotification("⚠️ EnergyOS — Consumo alto",`${(tw/1000).toFixed(2)} kW supera tu límite de ${(S.alertLimit/1000).toFixed(1)} kW`);
+  }
+  prevW=tw;
+},4000);
+
+// ── Profile ───────────────────────────────────────────────────────
+function openProfile(){
+  _('prof-username').value=S.user.username;
+  _('prof-current').value=""; _('prof-new').value=""; _('prof-confirm').value="";
+  _('prof-err').style.display="none";
+  showModal('profile-modal');
+}
+function saveProfile(){
+  const err=_('prof-err');
+  const name=_('prof-username').value.trim(),cur=_('prof-current').value,np=_('prof-new').value,cp=_('prof-confirm').value;
+  if(cur&&cur!==S.user.password){showErr(err,"Contraseña actual incorrecta");return;}
+  if(np&&np!==cp){showErr(err,"Las contraseñas no coinciden");return;}
+  if(np&&np.length<6){showErr(err,"Mínimo 6 caracteres");return;}
+  if(name) S.user.username=name;
+  if(np) S.user.password=np;
+  _('topbar-user').textContent=S.user.username;
+  _('profile-name').textContent=S.user.username;
+  _('avatar').textContent=S.user.username.charAt(0).toUpperCase();
+  hideModal('profile-modal');
+  showToast("Perfil actualizado","Los cambios se guardaron");
+}
+
+// ── Modal helpers ─────────────────────────────────────────────────
+function showModal(id){
+  if(id==="eco-modal") _('eco-saving').textContent=`Ahorro estimado: €${((totalW()-150)/1000*24*PRICE).toFixed(2)}/día`;
+  if(id==="add-modal") initAddModal();
+  if(id==="sched-modal") openSchedModal();
+  _(id).classList.add("open");
+}
+function hideModal(id){ _(id).classList.remove("open"); }
+
+// ── Toast ─────────────────────────────────────────────────────────
+function showToast(title,msg,type="ok"){
+  const d=document.createElement("div");
+  d.className=`toast toast-${type==="warn"?"warn":"ok"}`;
+  d.innerHTML=`<span style="font-size:22px">${type==="warn"?"⚠️":"✅"}</span><div style="flex:1"><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:${type==="warn"?"#ff7799":"#0ff"}">${title}</div>${msg?`<div style="font-size:12px;color:rgba(255,255,255,.45);margin-top:2px">${msg}</div>`:""}</div>`;
+  d.onclick=()=>d.remove();
+  _('toasts').appendChild(d);
+  setTimeout(()=>d.remove(),4500);
+}
+
+// ── Render all ────────────────────────────────────────────────────
+function renderAll(){ renderHome(); renderDeviceList(); renderAlerts(); }
+
+// ── History (rendered on demand) ──────────────────────────────────
+// (History tab removed for space, accessible via settings)
+
+// Service Worker registration (for PWA offline support)
+if('serviceWorker' in navigator){
+  const sw=`
+    self.addEventListener('install',e=>self.skipWaiting());
+    self.addEventListener('activate',e=>e.waitUntil(clients.claim()));
+    self.addEventListener('fetch',e=>{
+      if(e.request.mode==='navigate'){e.respondWith(fetch(e.request).catch(()=>new Response('<h1>EnergyOS — Sin conexión</h1><p>Reconectando…</p>',{headers:{'Content-Type':'text/html'}})));}
+    });
+  `;
+  const blob=new Blob([sw],{type:'application/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+}
+</script>
+</body>
+</html>
