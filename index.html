@@ -490,6 +490,13 @@ function doLogin() {
       _('profile-name').textContent=S.user.username;
       checkNotifStatus(); initSchedulerDays();
       renderAll(); startClock(); checkSchedules();
+      // Restaurar conexión Tapo guardada
+      if(S.tapo.connected){
+        _('tapo-status').textContent="· conectado"; _('tapo-status').style.color="#0ff";
+        _('conn-dot').className="dot-online";
+        _('tapo-conn-desc').textContent="Conectado · Tapo P110";
+        _('tapo-conn-badge').textContent="En vivo"; _('tapo-conn-badge').className="badge badge-on";
+      }
     } else {
       showErr(err,"Credenciales incorrectas");
       btn.textContent="Entrar →"; btn.disabled=false;
