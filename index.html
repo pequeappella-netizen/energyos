@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
@@ -347,10 +347,7 @@ select.form-input{appearance:none}
       <label class="form-label">HORA</label>
       <input id="sched-time" class="form-input" type="time" value="07:00"/>
       <label class="form-label">DÍAS</label>
-      <div style="display:flex;gap:8px;margin-bottom:14px" id="sched-days">
-        <div class="form-input" style="padding:0;border:none;background:none;display:flex;gap:8px;width:100%;margin-bottom:0">
-          <!-- Days rendered by JS -->
-        </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px" id="sched-days">
       </div>
       <div style="display:flex;gap:12px">
         <button class="btn-ghost" onclick="hideModal('sched-modal')">Cancelar</button>
@@ -934,10 +931,17 @@ function saveProfile(){
 function showModal(id){
   if(id==="eco-modal") _('eco-saving').textContent=`Ahorro estimado: €${((totalW()-150)/1000*24*PRICE).toFixed(2)}/día`;
   if(id==="add-modal") initAddModal();
-  if(id==="sched-modal") openSchedModal();
+  if(id==="sched-modal") initSchedModal();
   _(id).classList.add("open");
 }
 function hideModal(id){ _(id).classList.remove("open"); }
+
+function initSchedModal(){
+  const sel=_('sched-device'); sel.innerHTML="";
+  S.devices.forEach(d=>{const o=document.createElement("option");o.value=d.id;o.textContent=`${d.icon} ${d.name}`;sel.appendChild(o);});
+  S.selectedDays=[0,1,2,3,4]; S.schedAction="on";
+  initSchedulerDays(); selectSchedAction("on");
+}
 
 // ── Toast ─────────────────────────────────────────────────────────
 function showToast(title,msg,type="ok"){
