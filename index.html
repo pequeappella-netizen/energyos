@@ -446,19 +446,12 @@ const _savedTapo = JSON.parse(localStorage.getItem("energyos_tapo")||"null");
 const S = {
   user: _savedUser || { username:"admin", password:"energyos2024" },
   devices: [
-    {id:1,name:"Aire Acondicionado",room:"Sala",       icon:"❄️",watts:1500,on:true, custom:false},
-    {id:2,name:"Refrigerador",      room:"Cocina",     icon:"🧊",watts:150, on:true, custom:false},
-    {id:3,name:"Televisión",        room:"Sala",       icon:"📺",watts:120, on:false,custom:false},
-    {id:4,name:"Calentador",        room:"Baño",       icon:"🚿",watts:5500,on:true, custom:false},
-    {id:5,name:"Iluminación",       room:"Habitación", icon:"💡",watts:60,  on:false,custom:false},
-    {id:6,name:"Lavadora",          room:"Lavandería", icon:"🫧",watts:1000,on:false,custom:false},
-    {id:7,name:"Computadora",       room:"Oficina",    icon:"🖥️",watts:300, on:true, custom:false},
-    {id:8,name:"Horno",             room:"Cocina",     icon:"🍳",watts:2000,on:false,custom:false},
+    {id:"d1",name:"Heladera",     room:"Cocina",     icon:"🧊",watts:150, on:false,online:false,custom:false},
+    {id:"d2",name:"TV /Impresora",room:"Sala",       icon:"📺",watts:120, on:false,online:false,custom:false},
+    {id:"d3",name:"Lavadora",     room:"Lavandería", icon:"🫧",watts:1000,on:false,online:false,custom:false},
+    {id:"d4",name:"Lavavajillas", room:"Cocina",     icon:"🍽️",watts:800, on:false,online:false,custom:false},
   ],
-  schedules: [
-    {id:1,deviceId:1,action:"off",time:"23:00",days:[0,1,2,3,4],enabled:true},
-    {id:2,deviceId:4,action:"off",time:"08:30",days:[5,6],enabled:true},
-  ],
+  schedules: [],
   ecoMode: false,
   savedStates: null,
   alertLimit: 8000,
@@ -496,6 +489,8 @@ function doLogin() {
         _('conn-dot').className="dot-online";
         _('tapo-conn-desc').textContent="Conectado · Tapo P110";
         _('tapo-conn-badge').textContent="En vivo"; _('tapo-conn-badge').className="badge badge-on";
+        fetchTapoDevices();
+        setInterval(fetchTapoDevices, 15000);
       }
     } else {
       showErr(err,"Credenciales incorrectas");
@@ -533,6 +528,22 @@ function switchTab(t){
   if(t==="alerts")  renderAlerts();
 }
 
+// ── Live Tapo data ────────────────────────────────────────────────
+async function fetchTapoDevices() {
+  if (!S.tapo.connected || !S.tapo.url) return;
+  try {
+    const r = await fetch(`${S.tapo.url}/api/devices`);
+    const data = await r.json();
+    if (Array.isArray(data)) {
+      data.forEach(d => {
+        const local = S.devices.find(x => x.id === d.id);
+        if (local) { local.on=d.on; local.online=d.online; if(d.watts) local.watts=d.watts; }
+      });
+      renderHome(); renderDeviceList(); updateAlertCheck();
+    }
+  } catch(e) {}
+}
+
 // ── Toggle ────────────────────────────────────────────────────────
 async function toggleDevice(id){
   if(S.ecoMode) return;
@@ -540,7 +551,7 @@ async function toggleDevice(id){
   if(S.tapo.connected){
     try{
       const r=await fetch(`${S.tapo.url}/api/devices/${id}/toggle`,{method:"POST",headers:{Authorization:"Bearer "+S.tapo.key}});
-      const j=await r.json(); d.on=j.state;
+      const j=await r.json(); d.on=j.on;
     }catch{ d.on=!d.on; }
   } else { d.on=!d.on; }
   renderHome(); renderDeviceList(); updateAlertCheck();
