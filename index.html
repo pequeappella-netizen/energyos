@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
@@ -932,6 +932,10 @@ function showModal(id){
   if(id==="eco-modal") _('eco-saving').textContent=`Ahorro estimado: €${((totalW()-150)/1000*24*PRICE).toFixed(2)}/día`;
   if(id==="add-modal") initAddModal();
   if(id==="sched-modal") initSchedModal();
+  if(id==="tapo-modal"){
+    if(S.tapo.url) _('tapo-url').value=S.tapo.url;
+    if(S.tapo.key) _('tapo-key').value=S.tapo.key;
+  }
   _(id).classList.add("open");
 }
 function hideModal(id){ _(id).classList.remove("open"); }
