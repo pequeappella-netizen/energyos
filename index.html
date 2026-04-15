@@ -587,11 +587,11 @@ function renderRing(){
 
 function renderDeviceGrid(){
   _('dev-grid').innerHTML=S.devices.map(d=>`
-    <div class="dev-card" onclick="toggleDevice(${d.id})" style="background:rgba(20,8,40,${d.on?.55:.3});border:1px solid ${d.on?"rgba(168,85,247,.28)":"rgba(255,255,255,.07)"};opacity:${S.ecoMode&&!d.on?.3:1}">
+    <div class="dev-card" onclick="toggleDevice('${d.id}')" style="background:rgba(20,8,40,${d.on?.55:.3});border:1px solid ${d.on?"rgba(168,85,247,.28)":"rgba(255,255,255,.07)"};opacity:${S.ecoMode&&!d.on?.3:1}">
       <div style="font-size:26px;margin-bottom:8px">${d.icon}</div>
       <div style="font-size:13px;font-weight:700;color:${d.on?"#e8d0ff":"rgba(255,255,255,.3)"};margin-bottom:2px;line-height:1.2">${d.name}</div>
       <div style="font-size:10px;color:rgba(255,255,255,.2);font-family:'JetBrains Mono',monospace">${d.watts}W</div>
-      <div style="position:absolute;top:12px;right:12px"><div class="toggle ${d.on?"on":"off"}" onclick="event.stopPropagation();toggleDevice(${d.id})"><div class="toggle-knob"></div></div></div>
+      <div style="position:absolute;top:12px;right:12px"><div class="toggle ${d.on?"on":"off"}" onclick="event.stopPropagation();toggleDevice('${d.id}')"><div class="toggle-knob"></div></div></div>
     </div>`).join("");
 }
 
@@ -610,8 +610,8 @@ function renderDeviceList(){
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
         ${d.on?`<div style="font-size:11px;color:#ffaa33;font-family:'JetBrains Mono',monospace">€${(d.watts/1000*24*PRICE).toFixed(2)}/día</div>`:""}
-        <div class="toggle ${d.on?"on":"off"}" onclick="toggleDevice(${d.id})"><div class="toggle-knob"></div></div>
-        ${d.custom?`<div onclick="removeDevice(${d.id})" style="font-size:12px;color:rgba(255,85,120,.4);cursor:pointer;font-family:'JetBrains Mono',monospace">eliminar</div>`:""}
+        <div class="toggle ${d.on?"on":"off"}" onclick="toggleDevice('${d.id}')"><div class="toggle-knob"></div></div>
+        ${d.custom?`<div onclick="removeDevice('${d.id}')" style="font-size:12px;color:rgba(255,85,120,.4);cursor:pointer;font-family:'JetBrains Mono',monospace">eliminar</div>`:""}
       </div>
     </div>`).join("");
 }
@@ -967,3 +967,4 @@ if('serviceWorker' in navigator){
 </script>
 </body>
 </html>
+ 
