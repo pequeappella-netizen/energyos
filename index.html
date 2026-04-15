@@ -648,7 +648,7 @@ function openSchedModal(){
 }
 
 function addSchedule(){
-  const devId=+_('sched-device').value, time=_('sched-time').value;
+  const devId=_('sched-device').value, time=_('sched-time').value;
   if(!devId||!time||!S.selectedDays.length){showToast("Completa todos los campos","","warn");return;}
   S.schedules.push({id:Date.now(),deviceId:devId,action:S.schedAction,time,days:[...S.selectedDays],enabled:true});
   hideModal('sched-modal');
@@ -706,12 +706,19 @@ function renderSchedules(){
 function checkSchedules(){
   setInterval(()=>{
     const now=new Date(), h=now.getHours(), m=now.getMinutes(), day=now.getDay()===0?6:now.getDay()-1;
-    S.schedules.filter(s=>s.enabled).forEach(s=>{
+    S.schedules.filter(s=>s.enabled).forEach(async s=>{
       const [sh,sm]=s.time.split(":").map(Number);
       if(sh===h&&sm===m&&s.days.includes(day)&&now.getSeconds()<30){
         const d=S.devices.find(x=>x.id===s.deviceId); if(!d) return;
         const newState=s.action==="on";
-        if(d.on!==newState){ d.on=newState; renderHome(); renderDeviceList();
+        if(d.on!==newState){
+          // Ejecutar via backend real
+          if(S.tapo.connected){
+            try{
+              await fetch(`${S.tapo.url}/api/devices/${d.id}/toggle`,{method:"POST"});
+            }catch(e){}
+          }
+          d.on=newState; renderHome(); renderDeviceList();
           const msg=`${d.name} ${newState?"encendido":"apagado"} automáticamente`;
           showToast("⏰ Horario ejecutado",msg);
           sendNotification("⏰ EnergyOS",msg);
@@ -967,4 +974,3 @@ if('serviceWorker' in navigator){
 </script>
 </body>
 </html>
- 
