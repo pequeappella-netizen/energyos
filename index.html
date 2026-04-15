@@ -491,6 +491,7 @@ function doLogin() {
         _('tapo-conn-badge').textContent="En vivo"; _('tapo-conn-badge').className="badge badge-on";
         fetchTapoDevices();
         setInterval(fetchTapoDevices, 15000);
+        keepAlive();
       }
     } else {
       showErr(err,"Credenciales incorrectas");
@@ -941,8 +942,12 @@ function showToast(title,msg,type="ok"){
   setTimeout(()=>d.remove(),4500);
 }
 
-// ── Render all ────────────────────────────────────────────────────
-function renderAll(){ renderHome(); renderDeviceList(); renderAlerts(); }
+// ── Keep alive — evita que Render se duerma ───────────────────────
+function keepAlive() {
+  if (!S.tapo.url) return;
+  fetch(`${S.tapo.url}/api/health`).catch(()=>{});
+}
+setInterval(keepAlive, 8 * 60 * 1000); // cada 8 minutos
 
 // ── History (rendered on demand) ──────────────────────────────────
 // (History tab removed for space, accessible via settings)
