@@ -440,6 +440,7 @@ const PRICE = 0.18;
 
 // ── Persistencia localStorage ────────────────────────────────────
 const _savedUser = JSON.parse(localStorage.getItem("energyos_user")||"null");
+const _savedTapo = JSON.parse(localStorage.getItem("energyos_tapo")||"null");
 
 // ── State ─────────────────────────────────────────────────────────
 const S = {
@@ -464,7 +465,7 @@ const S = {
   selectedIcon: "🔌",
   schedAction: "on",
   selectedDays: [0,1,2,3,4],
-  tapo: { url:"", key:"", connected:false },
+  tapo: _savedTapo ? { url:_savedTapo.url, key:_savedTapo.key, connected:true } : { url:"", key:"", connected:false },
   history: ["L","M","X","J","V","S","D"].map(d=>({day:d,kwh:+(2+Math.random()*9).toFixed(1)})),
   notifEnabled: false,
 };
@@ -795,6 +796,7 @@ function saveTapoConnection(){
   const url=_('tapo-url').value.trim(), key=_('tapo-key').value.trim();
   if(!url||!key){showToast("Completa URL y API Key","","warn");return;}
   S.tapo={url,key,connected:true};
+  localStorage.setItem("energyos_tapo", JSON.stringify({url,key}));
   _('tapo-status').textContent="· conectado"; _('tapo-status').style.color="#0ff";
   _('conn-dot').className="dot-online";
   _('tapo-conn-desc').textContent="Conectado · Tapo P110";
