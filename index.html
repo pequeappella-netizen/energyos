@@ -438,6 +438,7 @@ const PRICE = 0.18;
 // ── Persistencia localStorage ────────────────────────────────────
 const _savedUser = JSON.parse(localStorage.getItem("energyos_user")||"null");
 const _savedTapo = JSON.parse(localStorage.getItem("energyos_tapo")||"null");
+const _savedSchedules = JSON.parse(localStorage.getItem("energyos_schedules")||"[]");
 
 // ── State ─────────────────────────────────────────────────────────
 const S = {
@@ -448,7 +449,7 @@ const S = {
     {id:"d3",name:"Lavadora",     room:"Lavandería", icon:"🫧",watts:1000,on:false,online:false,custom:false},
     {id:"d4",name:"Lavavajillas", room:"Cocina",     icon:"🍽️",watts:800, on:false,online:false,custom:false},
   ],
-  schedules: [],
+  schedules: _savedSchedules,
   ecoMode: false,
   savedStates: null,
   alertLimit: 8000,
@@ -648,19 +649,22 @@ function addSchedule(){
   const devId=_('sched-device').value, time=_('sched-time').value;
   if(!devId||!time||!S.selectedDays.length){showToast("Completa todos los campos","","warn");return;}
   S.schedules.push({id:Date.now(),deviceId:devId,action:S.schedAction,time,days:[...S.selectedDays],enabled:true});
+  saveSchedules();
   hideModal('sched-modal');
   renderSchedules();
   showToast("Horario guardado",`${time} · ${S.schedAction==="on"?"Encender":"Apagar"}`);
 }
 
+function saveSchedules(){ localStorage.setItem("energyos_schedules", JSON.stringify(S.schedules)); }
+
 function toggleSchedule(id){
   const s=S.schedules.find(x=>x.id===id); if(s) s.enabled=!s.enabled;
-  renderSchedules();
+  saveSchedules(); renderSchedules();
 }
 
 function removeSchedule(id){
   S.schedules=S.schedules.filter(x=>x.id!==id);
-  renderSchedules();
+  saveSchedules(); renderSchedules();
 }
 
 function renderSchedules(){
